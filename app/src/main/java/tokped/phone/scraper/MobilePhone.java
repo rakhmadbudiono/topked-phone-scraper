@@ -1,3 +1,5 @@
+package tokped.phone.scraper;
+
 class MobilePhone {
     String Name;
     String Descripton;
