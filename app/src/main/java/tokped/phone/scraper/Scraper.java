@@ -1,58 +1,70 @@
 package tokped.phone.scraper;
 
-import com.gargoylesoftware.htmlunit.*;
-import com.gargoylesoftware.htmlunit.html.*;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 class Scraper {
-    public Scraper() {}
+    final int PAGES = 25;
 
-    public MobilePhone[] ScrapMobilePhones() {
-        return new MobilePhone[]{
-            new MobilePhone(
-                "Mobile Phone 1",
-                "Mobile Phone 1 Series A",
-                "https://img.freepik.com/free-photo/mobile-smart-phone-white-background-technology_10541-3965.jpg?w=1380",
-                6900000.0,
-                4.2,
-                "Store 1"
-            ),
-            new MobilePhone(
-                "Mobile Phone 2",
-                "Mobile Phone 2 Series B",
-                "https://img.freepik.com/free-photo/mobile-smart-phone-white-background-technology_10541-3965.jpg?w=1380",
-                4200000.0,
-                1.3,
-                "Store 2"
-            )
-        };
+    ProductLinkScraper productLinkScraper;
+    ProductNameScraper productNameScraper;
+    ProductDescScraper productDescriptionScraper;
+    ProductImgLinkScraper productImgLinkScraper;
+    ProductPriceScraper productPriceScraper;
+    ProductRatingScraper productRatingScraper;
+    StoreNameScraper StoreNameScraper;
+
+
+    public Scraper() {
+        this.productLinkScraper = new ProductLinkScraper();
+        this.productNameScraper = new ProductNameScraper();
+        this.productDescriptionScraper = new ProductDescScraper();
+        this.productImgLinkScraper = new ProductImgLinkScraper();
+        this.productPriceScraper = new ProductPriceScraper();
+        this.productRatingScraper = new ProductRatingScraper();
+        this.StoreNameScraper = new StoreNameScraper();
     }
 
-    public void Test() {
-        WebClient webClient = new WebClient(BrowserVersion.CHROME);
-        webClient.getOptions().setCssEnabled(false);
-        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
-        webClient.getOptions().setThrowExceptionOnScriptError(false);
-        webClient.getOptions().setPrintContentOnFailingStatusCode(false);
-
-        try {
-            HtmlPage page = webClient.getPage("https://foodnetwork.co.uk/italian-family-dinners/");
-
-            webClient.getCurrentWindow().getJobManager().removeAllJobs();
+    public List<MobilePhone> ScrapMobilePhones() {
+        List<String> productLinks = new ArrayList<>();
+        for (int i = 0; i < PAGES ; i++) {
+            try {
+                List<String> links = this.productLinkScraper.scrap("https://www.tokopedia.com/p/handphone-tablet/handphone?page=" + Integer.toString(i+ 1));
             
-            String title = page.getTitleText();
-            System.out.println("Page Title: " + title);
-
-            List<HtmlAnchor> links = page.getAnchors();
-            for (HtmlAnchor link : links) {
-                String href = link.getHrefAttribute();
-                System.out.println("Link: " + href);
+                productLinks.addAll(
+                    links
+                );
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            
-            webClient.close();
+        }
+
+        List<MobilePhone> phones = new ArrayList<>();
+        for (String link : productLinks) {
+            try {
+                MobilePhone phone = extractMobilePhone(link);
+                phones.add(phone);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return phones;
+    }
+
+    private MobilePhone extractMobilePhone(String url) throws IOException {
+        try {
+            return new MobilePhone(
+                this.productNameScraper.scrap(url),
+                this.productDescriptionScraper.scrap(url),
+                this.productImgLinkScraper.scrap(url),
+                this.productPriceScraper.scrap(url),
+                this.productRatingScraper.scrap(url),
+                this.StoreNameScraper.scrap(url)
+            );
         } catch (IOException e) {
-            System.out.println("An error occurred: " + e);
+            throw new IOException("extractMobilePhone: " + e);
         }
     }
 }
